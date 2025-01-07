@@ -83,6 +83,17 @@ CAM_CONFIGS = dict(
         camera_attribs=dict(fovy="60"),
         parent_body="mobilebase0_support",
     ),
+    robot0_navview=dict(
+        pos=[0.3, 0, 0.7],
+        quat=[
+            0.707,
+            0.707,
+            -0.707,
+            -0.707,
+        ],
+        camera_attribs=dict(fovy="120"),
+        parent_body="mobilebase0_support",
+    ),
     robot0_eye_in_hand=dict(
         pos=[0.05, 0, 0],
         quat=[0, 0.707107, 0.707107, 0],

@@ -42,6 +42,12 @@ from robocasa.utils.texture_swap import (
 )
 from robocasa.utils.config_utils import refactor_composite_controller_config
 
+from mobpi.utils.env_utils import (
+    adjust_initial_robot_position,
+    sample_robot_positions,
+    sample_robot_orientations,
+)
+
 
 REGISTERED_KITCHEN_ENVS = {}
 
@@ -242,6 +248,9 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         use_distractors=False,
         translucent_robot=False,
         randomize_cameras=False,
+        place_robot=True,
+        place_robot_for_nav=False,
+        force_robot_placement=None,
     ):
         self.init_robot_base_pos = init_robot_base_pos
 
@@ -273,6 +282,9 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         self.use_distractors = use_distractors
         self.translucent_robot = translucent_robot
         self.randomize_cameras = randomize_cameras
+        self.place_robot = place_robot
+        self.place_robot_for_nav = place_robot_for_nav
+        self.force_robot_placement = force_robot_placement
 
         # intialize cameras
         self._cam_configs = deepcopy(CamUtils.CAM_CONFIGS)
@@ -452,12 +464,50 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                     continue
                 break
 
-        robot_base_pos, robot_base_ori = self.compute_robot_base_placement_pose(
-            ref_fixture=ref_fixture
-        )
-        robot_model = self.robots[0].robot_model
-        robot_model.set_base_xpos(robot_base_pos)
-        robot_model.set_base_ori(robot_base_ori)
+        if self.place_robot:
+            if self.force_robot_placement:
+                robot_base_pos = self.force_robot_placement[0]
+                robot_base_ori = self.force_robot_placement[1]
+            else:
+                robot_base_pos, robot_base_ori = self.compute_robot_base_placement_pose(
+                    ref_fixture=ref_fixture
+                )
+            robot_model = self.robots[0].robot_model
+            robot_model.set_base_xpos(robot_base_pos)
+            robot_model.set_base_ori(robot_base_ori)
+            print(
+                f"[kitchen.py] Placed robot at position {robot_base_pos} and orientation {robot_base_ori}"
+            )
+            self._init_robot_pos, self._init_robot_ori = robot_base_pos, robot_base_ori
+
+        if self.place_robot_for_nav:
+            self._default_init_robot_pos, self._default_init_robot_ori = (
+                self._init_robot_pos.copy(),
+                self._init_robot_ori.copy(),
+            )
+            base_fixture_bounds_2d, floor_fixture_bounds_2d = self._get_env_map()
+            robot_size = self.robots[0].robot_model.base.horizontal_radius
+            adjusted_default_robot_pos = adjust_initial_robot_position(
+                base_fixture_bounds_2d, self._default_init_robot_pos[:2], robot_size
+            )
+            sampled_init_positions = sample_robot_positions(
+                base_fixture_bounds_2d,
+                floor_fixture_bounds_2d,
+                adjusted_default_robot_pos,
+                robot_size,
+                self.rng,
+                num_samples=10,
+            )
+            sampled_init_orientations = sample_robot_orientations(
+                sampled_init_positions,
+                self._default_init_robot_pos[:2],
+                self.rng,
+                fov=75 / 180 * np.pi,
+            )
+            self._init_robot_pos, self._init_robot_ori = (
+                sampled_init_positions[0],
+                sampled_init_orientations[0],
+            )
 
         # create and place objects
         self._create_objects()
@@ -481,6 +531,71 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             self._load_model()
             return
         self.object_placements = object_placements
+
+    def _get_fixture_bounds(self, fixture_name):
+        fixture = self.fixtures[fixture_name]
+        pos = fixture.pos
+        if hasattr(fixture, "get_quat"):
+            quat = fixture.get_quat()
+        else:
+            quat = np.array([np.cos(fixture.rot / 2), 0, 0, np.sin(fixture.rot / 2)])
+        if isinstance(fixture, Floor):
+            size = fixture.get_bounding_box_size()
+        else:
+            size = fixture.size
+
+        def apply_rotation(size, position, quat):
+            r = Rotation.from_quat(np.array(quat)[[1, 2, 3, 0]])
+            sx, sy, sz = size
+            x, y, z = position
+
+            # Define vertices of a centered cube
+            vertices = np.array(
+                [
+                    [-sx / 2, -sy / 2, -sz / 2],
+                    [sx / 2, -sy / 2, -sz / 2],
+                    [sx / 2, sy / 2, -sz / 2],
+                    [-sx / 2, sy / 2, -sz / 2],
+                    [-sx / 2, -sy / 2, sz / 2],
+                    [sx / 2, -sy / 2, sz / 2],
+                    [sx / 2, sy / 2, sz / 2],
+                    [-sx / 2, sy / 2, sz / 2],
+                ]
+            )
+
+            # Apply rotation and translate vertices to object position
+            rotated_vertices = r.apply(vertices) + np.array([x, y, z])
+            return rotated_vertices
+
+        return apply_rotation(size, pos, quat)[:4, :2]
+
+    def _get_env_map(self):
+        robot_base_name = "robot0_base"  # Replace with the name of your robot's base
+        default_robot_pos, default_robot_ori = (
+            self._init_robot_pos,
+            self._init_robot_ori,
+        )
+
+        # gets the occupancy of the environment and default robot init pose
+        base_fixture_names = [
+            fixture_name
+            for fixture_name, fixture in self.fixtures.items()
+            if (
+                isinstance(fixture, Counter)
+                or isinstance(fixture, Stove)
+                or isinstance(fixture, Stovetop)
+                or isinstance(fixture, HousingCabinet)
+                or isinstance(fixture, Fridge)
+            )
+        ]
+        floor_fixture_name = "floor_room"
+
+        base_fixture_bounds_2d = [
+            self._get_fixture_bounds(base_fixture_name)
+            for base_fixture_name in base_fixture_names
+        ]
+        floor_fixture_bounds_2d = self._get_fixture_bounds(floor_fixture_name)
+        return base_fixture_bounds_2d, floor_fixture_bounds_2d
 
     def _create_objects(self):
         """
