@@ -279,7 +279,6 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         assert generative_textures in [None, False, "100p"]
         self.generative_textures = generative_textures
 
-        self.use_distractors = use_distractors
         self.translucent_robot = translucent_robot
         self.randomize_cameras = randomize_cameras
         self.place_robot = place_robot
@@ -481,6 +480,8 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             self._init_robot_pos, self._init_robot_ori = robot_base_pos, robot_base_ori
 
         if self.place_robot_for_nav:
+            # NOTE: this is only for data generation
+            # During eval, do not use this function as this will alter object placement for a given seed.
             self._default_init_robot_pos, self._default_init_robot_ori = (
                 self._init_robot_pos.copy(),
                 self._init_robot_ori.copy(),
@@ -504,9 +505,19 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                 self.rng,
                 fov=75 / 180 * np.pi,
             )
+            robot_base_pos = np.array(
+                [sampled_init_positions[0][0], sampled_init_positions[0][1], 0]
+            )
+            robot_base_ori = np.array([0.0, 0.0, sampled_init_orientations[0]])
+            print(
+                f"[kitchen.py] Placed robot at nav position {sampled_init_positions[0]} and orientation {sampled_init_orientations[0]}"
+            )
+            robot_model = self.robots[0].robot_model
+            robot_model.set_base_xpos(robot_base_pos)
+            robot_model.set_base_ori(robot_base_ori)
             self._init_robot_pos, self._init_robot_ori = (
-                sampled_init_positions[0],
-                sampled_init_orientations[0],
+                robot_base_pos,
+                robot_base_ori,
             )
 
         # create and place objects
