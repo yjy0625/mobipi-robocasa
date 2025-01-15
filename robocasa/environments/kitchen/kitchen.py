@@ -479,46 +479,8 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             )
             self._init_robot_pos, self._init_robot_ori = robot_base_pos, robot_base_ori
 
-        if self.place_robot_for_nav:
-            # NOTE: this is only for data generation
-            # During eval, do not use this function as this will alter object placement for a given seed.
-            self._default_init_robot_pos, self._default_init_robot_ori = (
-                self._init_robot_pos.copy(),
-                self._init_robot_ori.copy(),
-            )
-            base_fixture_bounds_2d, floor_fixture_bounds_2d = self._get_env_map()
-            robot_size = self.robots[0].robot_model.base.horizontal_radius
-            adjusted_default_robot_pos = adjust_initial_robot_position(
-                base_fixture_bounds_2d, self._default_init_robot_pos[:2], robot_size
-            )
-            sampled_init_positions = sample_robot_positions(
-                base_fixture_bounds_2d,
-                floor_fixture_bounds_2d,
-                adjusted_default_robot_pos,
-                robot_size,
-                self.rng,
-                num_samples=10,
-            )
-            sampled_init_orientations = sample_robot_orientations(
-                sampled_init_positions,
-                self._default_init_robot_pos[:2],
-                self.rng,
-                fov=75 / 180 * np.pi,
-            )
-            robot_base_pos = np.array(
-                [sampled_init_positions[0][0], sampled_init_positions[0][1], 0]
-            )
-            robot_base_ori = np.array([0.0, 0.0, sampled_init_orientations[0]])
-            print(
-                f"[kitchen.py] Placed robot at nav position {sampled_init_positions[0]} and orientation {sampled_init_orientations[0]}"
-            )
-            robot_model = self.robots[0].robot_model
-            robot_model.set_base_xpos(robot_base_pos)
-            robot_model.set_base_ori(robot_base_ori)
-            self._init_robot_pos, self._init_robot_ori = (
-                robot_base_pos,
-                robot_base_ori,
-            )
+        if self.place_robot_for_nav and not hasattr(self, "_is_drawer_env"):
+            self._place_robot_for_nav()
 
         # create and place objects
         self._create_objects()
@@ -542,6 +504,47 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             self._load_model()
             return
         self.object_placements = object_placements
+
+    def _place_robot_for_nav(self):
+        # NOTE: this is only for data generation
+        # During eval, do not use this function as this will alter object placement for a given seed.
+        self._default_init_robot_pos, self._default_init_robot_ori = (
+            self._init_robot_pos.copy(),
+            self._init_robot_ori.copy(),
+        )
+        base_fixture_bounds_2d, floor_fixture_bounds_2d = self._get_env_map()
+        robot_size = self.robots[0].robot_model.base.horizontal_radius
+        adjusted_default_robot_pos = adjust_initial_robot_position(
+            base_fixture_bounds_2d, self._default_init_robot_pos[:2], robot_size
+        )
+        sampled_init_positions = sample_robot_positions(
+            base_fixture_bounds_2d,
+            floor_fixture_bounds_2d,
+            adjusted_default_robot_pos,
+            robot_size,
+            self.rng,
+            num_samples=10,
+        )
+        sampled_init_orientations = sample_robot_orientations(
+            sampled_init_positions,
+            self._default_init_robot_pos[:2],
+            self.rng,
+            fov=75 / 180 * np.pi,
+        )
+        robot_base_pos = np.array(
+            [sampled_init_positions[0][0], sampled_init_positions[0][1], 0]
+        )
+        robot_base_ori = np.array([0.0, 0.0, sampled_init_orientations[0]])
+        print(
+            f"[kitchen.py] Placed robot at nav position {sampled_init_positions[0]} and orientation {sampled_init_orientations[0]}"
+        )
+        robot_model = self.robots[0].robot_model
+        robot_model.set_base_xpos(robot_base_pos)
+        robot_model.set_base_ori(robot_base_ori)
+        self._init_robot_pos, self._init_robot_ori = (
+            robot_base_pos,
+            robot_base_ori,
+        )
 
     def _get_fixture_bounds(self, fixture_name):
         fixture = self.fixtures[fixture_name]

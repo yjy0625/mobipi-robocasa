@@ -20,6 +20,7 @@ class ManipulateDrawer(Kitchen):
         # so we specify a which side the drawer is on to open. The side is determined in _load_model
         self.robot_side = ""
         self.drawer_id = drawer_id
+        self._is_drawer_env = True
         assert behavior in ["open", "close"]
         self.behavior = behavior
         super().__init__(*args, **kwargs)
@@ -72,6 +73,10 @@ class ManipulateDrawer(Kitchen):
         self.drawer_side = side
         robot_model.set_base_xpos(robot_base_pos)
         robot_model.set_base_ori(robot_base_ori)
+
+        self._init_robot_pos, self._init_robot_ori = robot_base_pos, robot_base_ori
+        if self.place_robot_for_nav:
+            self._place_robot_for_nav()
 
     def _reset_internal(self):
         """
