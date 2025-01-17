@@ -33,6 +33,9 @@ class ManipulateSinkFaucet(Kitchen):
         ep_meta["lang"] = f"{self.behavior.replace('_', ' ')} the sink faucet"
         return ep_meta
 
+    def get_object_name(self):
+        return "sink faucet"
+
     def _reset_internal(self):
         """
         Reset the environment internal state for the sink faucet tasks.
@@ -155,6 +158,9 @@ class TurnSinkSpout(Kitchen):
             init_sink_mode=self.init_sink_mode,
         )
         return ep_meta
+
+    def get_object_name(self):
+        return "sink spout"
 
     def _reset_internal(self):
         """

@@ -59,6 +59,9 @@ class ManipulateStoveKnob(Kitchen):
         )
         return ep_meta
 
+    def get_object_name(self):
+        return "stove"
+
     def _reset_internal(self):
         """
         Reset the environment internal state for the stove knob tasks.

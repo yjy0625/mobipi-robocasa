@@ -52,6 +52,16 @@ class ManipulateDoor(Kitchen):
         ep_meta["lang"] = f"{self.behavior} the {door_fxtr_name} {door_name}"
         return ep_meta
 
+    def get_object_name(self):
+        if isinstance(self.door_fxtr, Microwave):
+            return "microwave door"
+        elif isinstance(self.door_fxtr, SingleCabinet):
+            return "cabinet door"
+        elif isinstance(self.door_fxtr, HingeCabinet):
+            return "cabinet door"
+        elif isinstance(self.door_fxtr, Drawer):
+            return "drawer door"
+
     def _reset_internal(self):
         """
         Reset the environment internal state for the door tasks.

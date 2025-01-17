@@ -505,6 +505,8 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             return
         self.object_placements = object_placements
 
+        self.best_camera_view = "robot0_agentview_right"
+
     def _place_robot_for_nav(self):
         # NOTE: this is only for data generation
         # During eval, do not use this function as this will alter object placement for a given seed.
@@ -1677,6 +1679,9 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                 fxtr for (fxtr, d) in zip(cand_fixtures, dists) if d - min_dist < 0.10
             ]
             return self.rng.choice(close_fixtures)
+
+    def get_object_name(self):
+        raise NotImplementedError()
 
     def register_fixture_ref(self, ref_name, fn_kwargs):
         """

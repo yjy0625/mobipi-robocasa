@@ -71,12 +71,24 @@ class ManipulateDrawer(Kitchen):
         random_index = self.rng.integers(len(inits))
         robot_base_pos, robot_base_ori, side = inits[random_index]
         self.drawer_side = side
-        robot_model.set_base_xpos(robot_base_pos)
-        robot_model.set_base_ori(robot_base_ori)
 
-        self._init_robot_pos, self._init_robot_ori = robot_base_pos, robot_base_ori
-        if self.place_robot_for_nav:
-            self._place_robot_for_nav()
+        if self.drawer_side == "right":
+            # drawer is to the right of the robot, right view is better
+            self.best_camera_view = "robot0_agentview_right"
+        else:
+            self.best_camera_view = "robot0_agentview_left"
+
+        if self.place_robot:
+            if self.force_robot_placement:
+                robot_base_pos = self.force_robot_placement[0]
+                robot_base_ori = self.force_robot_placement[1]
+
+            robot_model.set_base_xpos(robot_base_pos)
+            robot_model.set_base_ori(robot_base_ori)
+
+            self._init_robot_pos, self._init_robot_ori = robot_base_pos, robot_base_ori
+            if self.place_robot_for_nav:
+                self._place_robot_for_nav()
 
     def _reset_internal(self):
         """
@@ -106,6 +118,9 @@ class ManipulateDrawer(Kitchen):
         ep_meta = super().get_ep_meta()
         ep_meta["lang"] = f"{self.behavior} the {self.drawer_side} drawer"
         return ep_meta
+
+    def get_object_name(self):
+        return "open drawer"
 
     def check_fxtr_contact(self, pos):
         """

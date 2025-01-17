@@ -37,6 +37,9 @@ class MicrowavePressButton(Kitchen):
             ep_meta["lang"] = "press the stop button on the microwave"
         return ep_meta
 
+    def get_object_name(self):
+        return "microwave"
+
     def _get_obj_cfgs(self):
         """
         Get the object configurations for the microwave tasks. This includes the object placement configurations.
