@@ -474,9 +474,9 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             robot_model = self.robots[0].robot_model
             robot_model.set_base_xpos(robot_base_pos)
             robot_model.set_base_ori(robot_base_ori)
-            print(
-                f"[kitchen.py] Placed robot at position {robot_base_pos} and orientation {robot_base_ori}"
-            )
+            # print(
+            #     f"[kitchen.py] Placed robot at position {robot_base_pos} and orientation {robot_base_ori}"
+            # )
             self._init_robot_pos, self._init_robot_ori = robot_base_pos, robot_base_ori
 
         if self.place_robot_for_nav and not hasattr(self, "_is_drawer_env"):
