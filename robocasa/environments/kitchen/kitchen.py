@@ -46,6 +46,7 @@ from mobpi.utils.env_utils import (
     adjust_initial_robot_position,
     sample_robot_positions,
     sample_robot_orientations,
+    set_robot_base_pose,
 )
 
 
@@ -474,13 +475,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             robot_model = self.robots[0].robot_model
             robot_model.set_base_xpos(robot_base_pos)
             robot_model.set_base_ori(robot_base_ori)
-            # print(
-            #     f"[kitchen.py] Placed robot at position {robot_base_pos} and orientation {robot_base_ori}"
-            # )
             self._init_robot_pos, self._init_robot_ori = robot_base_pos, robot_base_ori
-
-        if self.place_robot_for_nav and not hasattr(self, "_is_drawer_env"):
-            self._place_robot_for_nav()
 
         # create and place objects
         self._create_objects()
@@ -508,8 +503,8 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         self.best_camera_view = "robot0_agentview_right"
 
     def _place_robot_for_nav(self):
-        # NOTE: this is only for data generation
-        # During eval, do not use this function as this will alter object placement for a given seed.
+        rng = deepcopy(self.rng)
+
         self._default_init_robot_pos, self._default_init_robot_ori = (
             self._init_robot_pos.copy(),
             self._init_robot_ori.copy(),
@@ -519,34 +514,60 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         adjusted_default_robot_pos = adjust_initial_robot_position(
             base_fixture_bounds_2d, self._default_init_robot_pos[:2], robot_size
         )
-        sampled_init_positions = sample_robot_positions(
-            base_fixture_bounds_2d,
-            floor_fixture_bounds_2d,
-            adjusted_default_robot_pos,
-            robot_size,
-            self.rng,
-            num_samples=10,
-        )
-        sampled_init_orientations = sample_robot_orientations(
-            sampled_init_positions,
-            self._default_init_robot_pos[:2],
-            self.rng,
-            fov=75 / 180 * np.pi,
-        )
-        robot_base_pos = np.array(
-            [sampled_init_positions[0][0], sampled_init_positions[0][1], 0]
-        )
-        robot_base_ori = np.array([0.0, 0.0, sampled_init_orientations[0]])
-        print(
-            f"[kitchen.py] Placed robot at nav position {sampled_init_positions[0]} and orientation {sampled_init_orientations[0]}"
-        )
-        robot_model = self.robots[0].robot_model
-        robot_model.set_base_xpos(robot_base_pos)
-        robot_model.set_base_ori(robot_base_ori)
-        self._init_robot_pos, self._init_robot_ori = (
-            robot_base_pos,
-            robot_base_ori,
-        )
+        while True:
+            sampled_init_positions = sample_robot_positions(
+                base_fixture_bounds_2d,
+                floor_fixture_bounds_2d,
+                adjusted_default_robot_pos,
+                robot_size,
+                rng,
+                num_samples=10,
+            )
+            sampled_init_orientations = sample_robot_orientations(
+                sampled_init_positions,
+                self._default_init_robot_pos[:2],
+                rng,
+                fov=75 / 180 * np.pi,
+            )
+            robot_base_pos = np.array(
+                [sampled_init_positions[0][0], sampled_init_positions[0][1], 0]
+            )
+            robot_base_ori = np.array([0.0, 0.0, sampled_init_orientations[0]])
+            self._init_robot_pos, self._init_robot_ori = (
+                robot_base_pos,
+                robot_base_ori,
+            )
+
+            # check collision with the env
+            cols = self.sim.data.contact.dist < 0
+            cols_indices = cols.nonzero()[0]
+            collided = False
+            for idx in cols_indices:
+                if "mobilebase" in self.sim.model.geom_id2name(
+                    self.sim.data.contact.geom1[idx]
+                ) or "mobilebase" in self.sim.model.geom_id2name(
+                    self.sim.data.contact.geom2[idx]
+                ):
+                    collided = True
+                    name1 = self.sim.model.geom_id2name(
+                        self.sim.data.contact.geom1[idx]
+                    )
+                    name2 = self.sim.model.geom_id2name(
+                        self.sim.data.contact.geom2[idx]
+                    )
+                    print(
+                        f"[kitchen.py] Sampled pose has collision between objects [{name1}] and [{name2}]; resampling"
+                    )
+                    break
+            if not collided:
+                set_robot_base_pose(
+                    self,
+                    np.array([robot_base_pos[0], robot_base_pos[1], robot_base_ori[2]]),
+                )
+                print(
+                    f"[kitchen.py] Placed robot at nav position {sampled_init_positions[0]} and orientation {sampled_init_orientations[0]}"
+                )
+                break
 
     def _get_fixture_bounds(self, fixture_name):
         fixture = self.fixtures[fixture_name]
@@ -1024,6 +1045,10 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                     obj.joints[0],
                     np.concatenate([np.array(obj_pos), np.array(obj_quat)]),
                 )
+
+        # Try to place object properly for navigation purposes
+        if self.place_robot_for_nav:
+            self._place_robot_for_nav()
 
         # step through a few timesteps to settle objects
         action = np.zeros(self.action_spec[0].shape)  # apply empty action

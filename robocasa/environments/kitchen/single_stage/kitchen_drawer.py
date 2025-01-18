@@ -87,8 +87,6 @@ class ManipulateDrawer(Kitchen):
             robot_model.set_base_ori(robot_base_ori)
 
             self._init_robot_pos, self._init_robot_ori = robot_base_pos, robot_base_ori
-            if self.place_robot_for_nav:
-                self._place_robot_for_nav()
 
     def _reset_internal(self):
         """
