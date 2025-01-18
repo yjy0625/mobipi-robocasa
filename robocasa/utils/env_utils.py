@@ -33,6 +33,7 @@ def create_env(
     layout_ids=None,
     style_ids=None,
     place_robot=True,
+    place_robot_for_nav=False,
 ):
     controller_config = load_composite_controller_config(
         controller=None,
@@ -61,6 +62,7 @@ def create_env(
         style_ids=style_ids,
         translucent_robot=False,
         place_robot=place_robot,
+        place_robot_for_nav=place_robot_for_nav,
     )
 
     env = robosuite.make(**env_kwargs)

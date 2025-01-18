@@ -43,9 +43,7 @@ from robocasa.utils.texture_swap import (
 from robocasa.utils.config_utils import refactor_composite_controller_config
 
 from mobpi.utils.env_utils import (
-    adjust_initial_robot_position,
-    sample_robot_positions,
-    sample_robot_orientations,
+    grid_based_pose_sampling,
     set_robot_base_pose,
 )
 
@@ -284,6 +282,9 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         self.randomize_cameras = randomize_cameras
         self.place_robot = place_robot
         self.place_robot_for_nav = place_robot_for_nav
+        self.place_robot_for_nav_rng = np.random.default_rng(
+            seed
+        )  # make randomizer for rng separate from main rng
         self.force_robot_placement = force_robot_placement
 
         # intialize cameras
@@ -416,7 +417,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                 fxtr_placements = fxtr_placement_initializer.sample()
             except RandomizationError as e:
                 if macros.VERBOSE:
-                    print("Ranomization error in initial placement. Try #{}".format(i))
+                    print("Randomization error in initial placement. Try #{}".format(i))
                 continue
             break
         if fxtr_placements is None:
@@ -503,7 +504,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         self.best_camera_view = "robot0_agentview_right"
 
     def _place_robot_for_nav(self):
-        rng = deepcopy(self.rng)
+        rng = self.place_robot_for_nav_rng
 
         self._default_init_robot_pos, self._default_init_robot_ori = (
             self._init_robot_pos.copy(),
@@ -511,10 +512,13 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         )
         base_fixture_bounds_2d, floor_fixture_bounds_2d = self._get_env_map()
         robot_size = self.robots[0].robot_model.base.horizontal_radius
+        """
         adjusted_default_robot_pos = adjust_initial_robot_position(
             base_fixture_bounds_2d, self._default_init_robot_pos[:2], robot_size
         )
+        """
         while True:
+            """
             sampled_init_positions = sample_robot_positions(
                 base_fixture_bounds_2d,
                 floor_fixture_bounds_2d,
@@ -533,9 +537,25 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                 [sampled_init_positions[0][0], sampled_init_positions[0][1], 0]
             )
             robot_base_ori = np.array([0.0, 0.0, sampled_init_orientations[0]])
+            """
+            sampled_init_pose = grid_based_pose_sampling(
+                base_fixture_bounds_2d,
+                floor_fixture_bounds_2d,
+                self._default_init_robot_pos[:2],
+                rng,
+                grid_resolution=0.2,
+                orientation_resolution=np.pi / 6,
+                fov=np.pi * 75 / 180,
+            )
+            robot_base_pos = np.array([sampled_init_pose[0], sampled_init_pose[1], 0])
+            robot_base_ori = np.array([0.0, 0.0, sampled_init_pose[2]])
             self._init_robot_pos, self._init_robot_ori = (
                 robot_base_pos,
                 robot_base_ori,
+            )
+            set_robot_base_pose(
+                self,
+                np.array([robot_base_pos[0], robot_base_pos[1], robot_base_ori[2]]),
             )
 
             # check collision with the env
@@ -560,12 +580,8 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                     )
                     break
             if not collided:
-                set_robot_base_pose(
-                    self,
-                    np.array([robot_base_pos[0], robot_base_pos[1], robot_base_ori[2]]),
-                )
                 print(
-                    f"[kitchen.py] Placed robot at nav position {sampled_init_positions[0]} and orientation {sampled_init_orientations[0]}"
+                    f"[kitchen.py] Placed robot at nav position {robot_base_pos[:2].round(3)} and orientation {robot_base_ori[-1]:.3f}"
                 )
                 break
 
