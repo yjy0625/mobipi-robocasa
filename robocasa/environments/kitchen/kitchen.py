@@ -512,32 +512,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         )
         base_fixture_bounds_2d, floor_fixture_bounds_2d = self._get_env_map()
         robot_size = self.robots[0].robot_model.base.horizontal_radius
-        """
-        adjusted_default_robot_pos = adjust_initial_robot_position(
-            base_fixture_bounds_2d, self._default_init_robot_pos[:2], robot_size
-        )
-        """
         while True:
-            """
-            sampled_init_positions = sample_robot_positions(
-                base_fixture_bounds_2d,
-                floor_fixture_bounds_2d,
-                adjusted_default_robot_pos,
-                robot_size,
-                rng,
-                num_samples=10,
-            )
-            sampled_init_orientations = sample_robot_orientations(
-                sampled_init_positions,
-                self._default_init_robot_pos[:2],
-                rng,
-                fov=75 / 180 * np.pi,
-            )
-            robot_base_pos = np.array(
-                [sampled_init_positions[0][0], sampled_init_positions[0][1], 0]
-            )
-            robot_base_ori = np.array([0.0, 0.0, sampled_init_orientations[0]])
-            """
             sampled_init_pose = grid_based_pose_sampling(
                 base_fixture_bounds_2d,
                 floor_fixture_bounds_2d,
