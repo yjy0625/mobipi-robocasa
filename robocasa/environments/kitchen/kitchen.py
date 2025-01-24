@@ -250,6 +250,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         place_robot=True,
         place_robot_for_nav=False,
         force_robot_placement=None,
+        randomize_base_init_pose=None,
     ):
         self.init_robot_base_pos = init_robot_base_pos
 
@@ -285,7 +286,9 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         self.place_robot_for_nav_rng = np.random.default_rng(
             seed
         )  # make randomizer for rng separate from main rng
+        self.randomized_robot_base_pose_rng = np.random.default_rng(seed)
         self.force_robot_placement = force_robot_placement
+        self.randomize_base_init_pose = randomize_base_init_pose
 
         # intialize cameras
         self._cam_configs = deepcopy(CamUtils.CAM_CONFIGS)
@@ -473,6 +476,19 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                 robot_base_pos, robot_base_ori = self.compute_robot_base_placement_pose(
                     ref_fixture=ref_fixture
                 )
+                if self.randomize_base_init_pose is not None:
+                    robot_base_vec = np.array(
+                        [robot_base_pos[0], robot_base_pos[1], robot_base_ori[2]]
+                    )
+                    sampled_noise = self.randomized_robot_base_pose_rng.normal(
+                        loc=0, scale=self.randomize_base_init_pose, size=(3,)
+                    )
+                    randomized_robot_base_vec = robot_base_vec + sampled_noise
+                    robot_base_pos = np.array(
+                        [randomized_robot_base_vec[0], randomized_robot_base_vec[1], 0]
+                    )
+                    robot_base_ori = np.array([0, 0, randomized_robot_base_vec[2]])
+
             robot_model = self.robots[0].robot_model
             robot_model.set_base_xpos(robot_base_pos)
             robot_model.set_base_ori(robot_base_ori)

@@ -82,6 +82,18 @@ class ManipulateDrawer(Kitchen):
             if self.force_robot_placement:
                 robot_base_pos = self.force_robot_placement[0]
                 robot_base_ori = self.force_robot_placement[1]
+            elif self.randomize_base_init_pose:
+                robot_base_vec = np.array(
+                    [robot_base_pos[0], robot_base_pos[1], robot_base_ori[2]]
+                )
+                sampled_noise = self.randomized_robot_base_pose_rng.normal(
+                    loc=0, scale=self.randomize_base_init_pose, size=(3,)
+                )
+                randomized_robot_base_vec = robot_base_vec + sampled_noise
+                robot_base_pos = np.array(
+                    [randomized_robot_base_vec[0], randomized_robot_base_vec[1], 0]
+                )
+                robot_base_ori = np.array([0, 0, randomized_robot_base_vec[2]])
 
             robot_model.set_base_xpos(robot_base_pos)
             robot_model.set_base_ori(robot_base_ori)
