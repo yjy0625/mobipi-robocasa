@@ -522,10 +522,11 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
     def _place_robot_for_nav(self):
         rng = self.place_robot_for_nav_rng
 
-        self._default_init_robot_pos, self._default_init_robot_ori = (
-            self._init_robot_pos.copy(),
-            self._init_robot_ori.copy(),
-        )
+        if self.hard_reset or not hasattr(self, "_default_init_robot_pos"):
+            self._default_init_robot_pos, self._default_init_robot_ori = (
+                self._init_robot_pos.copy(),
+                self._init_robot_ori.copy(),
+            )
         base_fixture_bounds_2d, floor_fixture_bounds_2d = self._get_env_map()
         robot_size = self.robots[0].robot_model.base.horizontal_radius
         while True:
