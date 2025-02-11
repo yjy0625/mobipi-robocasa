@@ -251,6 +251,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         place_robot_for_nav=False,
         force_robot_placement=None,
         randomize_base_init_pose=None,
+        simple=False,
     ):
         self.init_robot_base_pos = init_robot_base_pos
 

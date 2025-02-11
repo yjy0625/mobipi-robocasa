@@ -18,6 +18,8 @@ class ManipulateDoor(Kitchen):
         self.door_id = door_id
         assert behavior in ["open", "close"]
         self.behavior = behavior
+        if "simple" in kwargs and kwargs["simple"]:
+            self.door_id = "microwave"
         super().__init__(*args, **kwargs)
 
     def _setup_kitchen_references(self):
