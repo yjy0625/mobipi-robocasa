@@ -41,8 +41,7 @@ from robocasa.utils.texture_swap import (
     replace_wall_texture,
 )
 from robocasa.utils.config_utils import refactor_composite_controller_config
-
-from mobpi.utils.env_utils import (
+from robocasa.utils.env_utils import (
     grid_based_pose_sampling,
     set_robot_base_pose,
 )
@@ -251,7 +250,6 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         place_robot_for_nav=False,
         force_robot_placement=None,
         randomize_base_init_pose=None,
-        simple=False,
     ):
         self.init_robot_base_pos = init_robot_base_pos
 

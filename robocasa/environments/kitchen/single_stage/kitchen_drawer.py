@@ -21,73 +21,56 @@ class ManipulateDrawer(Kitchen):
         self.robot_side = ""
         self.drawer_id = drawer_id
         self._is_drawer_env = True
-        if "simple" in kwargs and kwargs["simple"]:
-            self._exclude_drawer = "left"
-        else:
-            self._exclude_drawer = None
         assert behavior in ["open", "close"]
         self.behavior = behavior
         super().__init__(*args, **kwargs)
 
     def _load_model(self):
-        while True:
-            super()._load_model()
-            robot_model = self.robots[0].robot_model
-            x_ofs = (self.drawer.width / 2) + 0.3
-            inits = []
+        super()._load_model()
+        robot_model = self.robots[0].robot_model
+        x_ofs = (self.drawer.width / 2) + 0.3
+        inits = []
 
-            # compute where the robot placement if it is to the left of the drawer
-            (
-                robot_base_pos_left,
-                robot_base_ori_left,
-            ) = self.compute_robot_base_placement_pose(
-                ref_fixture=self.drawer, offset=(-x_ofs, -0.23)
-            )
-            # get a test point to check if the robot is in contact with any fixture.
-            test_pos_left, _ = self.compute_robot_base_placement_pose(
-                ref_fixture=self.drawer, offset=(-x_ofs - 0.3, -0.23)
-            )
+        # compute where the robot placement if it is to the left of the drawer
+        (
+            robot_base_pos_left,
+            robot_base_ori_left,
+        ) = self.compute_robot_base_placement_pose(
+            ref_fixture=self.drawer, offset=(-x_ofs, -0.23)
+        )
+        # get a test point to check if the robot is in contact with any fixture.
+        test_pos_left, _ = self.compute_robot_base_placement_pose(
+            ref_fixture=self.drawer, offset=(-x_ofs - 0.3, -0.23)
+        )
 
-            # check if the robot will be in contact with any fixture or wall during initialization
-            if not self.check_fxtr_contact(
-                test_pos_left
-            ) and not self.check_sidewall_contact(test_pos_left):
-                # drawer is to the right of the robot
-                if not self._exclude_drawer == "right":
-                    inits.append((robot_base_pos_left, robot_base_ori_left, "right"))
+        # check if the robot will be in contact with any fixture or wall during initialization
+        if not self.check_fxtr_contact(
+            test_pos_left
+        ) and not self.check_sidewall_contact(test_pos_left):
+            # drawer is to the right of the robot
+            inits.append((robot_base_pos_left, robot_base_ori_left, "right"))
 
-            # compute where the robot placement if it is to the right of the drawer
-            (
-                robot_base_pos_right,
-                robot_base_ori_right,
-            ) = self.compute_robot_base_placement_pose(
-                ref_fixture=self.drawer, offset=(x_ofs, -0.23)
-            )
-            # get a test point to check if the robot is in contact with any fixture if initialized to the right of the drawer
-            test_pos_right, _ = self.compute_robot_base_placement_pose(
-                ref_fixture=self.drawer, offset=(x_ofs + 0.3, -0.23)
-            )
+        # compute where the robot placement if it is to the right of the drawer
+        (
+            robot_base_pos_right,
+            robot_base_ori_right,
+        ) = self.compute_robot_base_placement_pose(
+            ref_fixture=self.drawer, offset=(x_ofs, -0.23)
+        )
+        # get a test point to check if the robot is in contact with any fixture if initialized to the right of the drawer
+        test_pos_right, _ = self.compute_robot_base_placement_pose(
+            ref_fixture=self.drawer, offset=(x_ofs + 0.3, -0.23)
+        )
 
-            if not self.check_fxtr_contact(
-                test_pos_right
-            ) and not self.check_sidewall_contact(test_pos_right):
-                if not self._exclude_drawer == "left":
-                    inits.append((robot_base_pos_right, robot_base_ori_right, "left"))
+        if not self.check_fxtr_contact(
+            test_pos_right
+        ) and not self.check_sidewall_contact(test_pos_right):
+            inits.append((robot_base_pos_right, robot_base_ori_right, "left"))
 
-            if not len(inits) > 0:
-                continue
-            else:
-                break
-
+        assert len(inits) > 0
         random_index = self.rng.integers(len(inits))
         robot_base_pos, robot_base_ori, side = inits[random_index]
         self.drawer_side = side
-
-        if self.drawer_side == "right":
-            # drawer is to the right of the robot, right view is better
-            self.best_camera_view = "robot0_agentview_right"
-        else:
-            self.best_camera_view = "robot0_agentview_left"
 
         if self.place_robot:
             if self.force_robot_placement:

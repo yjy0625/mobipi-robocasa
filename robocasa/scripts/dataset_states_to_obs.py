@@ -238,7 +238,6 @@ def write_traj_to_file(
         env_meta["env_kwargs"]["randomize_cameras"] = True
     else:
         env_meta["env_kwargs"]["randomize_cameras"] = False
-        # assert not env_meta["env_kwargs"]["randomize_cameras"]
     env = EnvUtils.create_env_for_data_processing(
         env_meta=env_meta,
         camera_names=args.camera_names,
@@ -353,7 +352,6 @@ def extract_multiple_trajectories_with_error(
     if args.randomize_cameras:
         env_meta["env_kwargs"]["randomize_cameras"] = True
     else:
-        # assert not env_meta["env_kwargs"]["randomize_cameras"]
         env_meta["env_kwargs"]["randomize_cameras"] = False
     env = EnvUtils.create_env_for_data_processing(
         env_meta=env_meta,
@@ -462,19 +460,14 @@ def dataset_states_to_obs_multiprocessing(args):
             output_name = os.path.basename(args.dataset)[:-5] + "_ld.hdf5"
         else:
             image_suffix = str(args.camera_width)
-            image_suffix = (
-                image_suffix + "_randcams"
-                if args.randomize_cameras
-                else "fixview"  # image_suffix
-            )
-            if args.generative_textures:
-                output_name = os.path.basename(args.dataset)[
-                    :-5
-                ] + "_gentex_im{}.hdf5".format(image_suffix)
+            if args.randomize_cameras:
+                image_suffix = image_suffix + "_randcams"
             else:
-                output_name = os.path.basename(args.dataset)[:-5] + "_im{}.hdf5".format(
-                    image_suffix
-                )
+                image_suffix = image_suffix + "_fixview"
+            if args.generative_textures:
+                output_name = f"demo_gentex_im{image_suffix}.hdf5"
+            else:
+                output_name = f"demo_im{image_suffix}.hdf5"
 
     output_path = os.path.join(os.path.dirname(args.dataset), output_name)
 

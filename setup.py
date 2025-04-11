@@ -31,6 +31,7 @@ setup(
         "lxml",
         "hidapi",
         "tianshou==0.4.10",
+        "shapely",
     ],
     eager_resources=["*"],
     include_package_data=True,
