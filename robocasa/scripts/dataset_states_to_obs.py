@@ -214,12 +214,13 @@ def write_traj_to_file(
                     print("++" * 50)
                     raise Exception("Write out to file has failed")
                 print(
-                    "ep {}: wrote {} transitions to group {} at process {} with {} finished. Datagen rate: {:.2f} sec/demo".format(
+                    "ep {}: wrote {} transitions to group {} at process {} with {} finished. Layout ID: {}. Datagen rate: {:.2f} sec/demo".format(
                         num_processed,
                         ep_data_grp.attrs["num_samples"],
                         ep,
                         process_num,
                         total_run.value,
+                        json.loads(traj["initial_state_dict"]["ep_meta"])["layout_id"],
                         (time.time() - start_time) / num_processed,
                     )
                 )
@@ -380,6 +381,16 @@ def extract_multiple_trajectories_with_error(
     inds = np.argsort([int(elem[5:]) for elem in demos])
     demos = [demos[i] for i in inds]
 
+    # maybe filter by layout ids
+    if args.filter_layouts is not None:
+        filtered_layouts = [int(s) for s in args.filter_layouts.split(",")]
+        demos = [
+            demo
+            for demo in demos
+            if json.loads(f["data"][demo].attrs["ep_meta"])["layout_id"]
+            in filtered_layouts
+        ]
+
     # maybe reduce the number of demonstrations to playback
     if args.n is not None:
         demos = demos[: args.n]
@@ -485,6 +496,16 @@ def dataset_states_to_obs_multiprocessing(args):
         demos = list(f["data"].keys())
     inds = np.argsort([int(elem[5:]) for elem in demos])
     demos = [demos[i] for i in inds]
+
+    # maybe filter by layout ids
+    if args.filter_layouts is not None:
+        filtered_layouts = [int(s) for s in args.filter_layouts.split(",")]
+        demos = [
+            demo
+            for demo in demos
+            if json.loads(f["data"][demo].attrs["ep_meta"])["layout_id"]
+            in filtered_layouts
+        ]
 
     if args.n is not None:
         demos = demos[: args.n]
@@ -658,6 +679,13 @@ if __name__ == "__main__":
         "--add_datagen_info",
         action="store_true",
         help="(optional) add datagen info (used for mimicgen)",
+    )
+
+    parser.add_argument(
+        "--filter_layouts",
+        type=str,
+        default=None,
+        help="filter only the specified layouts (comma separated)",
     )
 
     parser.add_argument("--generative_textures", action="store_true")
