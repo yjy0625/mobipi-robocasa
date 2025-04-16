@@ -332,6 +332,10 @@ def get_ds_path(task, ds_type, return_info=False):
     elif ds_type == "mg_fixview_im":
         folder = ds_config.get("mg_path", None)
         fname = "demo_im128_fixview.hdf5"
+    elif ds_type == "mg_nav_fixview_im":
+        folder = ds_config.get("mg_path", None)
+        folder = re.sub(r"mg/.*", r"mg_nav/demo", folder)
+        fname = "demo_im128_fixview.hdf5"
     else:
         raise ValueError
 
@@ -353,5 +357,8 @@ def get_ds_path(task, ds_type, return_info=False):
 
     ds_info = {}
     ds_info["url"] = ds_config["download_links"][ds_type]
-    ds_info["horizon"] = ds_config["horizon"]
+    if "nav" in ds_type:
+        ds_info["horizon"] = 800
+    else:
+        ds_info["horizon"] = ds_config["horizon"]
     return ds_path, ds_info
