@@ -329,6 +329,9 @@ def get_ds_path(task, ds_type, return_info=False):
         # mg dataset is not available for all tasks
         folder = ds_config.get("mg_path", None)
         fname = "demo_gentex_im128_randcams.hdf5"
+    elif ds_type == "mg_fixview":
+        folder = ds_config.get("mg_path", None)
+        fname = "demo_im128_fixview.hdf5"
     else:
         raise ValueError
 
