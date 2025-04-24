@@ -614,12 +614,6 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         return apply_rotation(size, pos, quat)[:4, :2]
 
     def _get_env_map(self):
-        robot_base_name = "robot0_base"  # Replace with the name of your robot's base
-        default_robot_pos, default_robot_ori = (
-            self._init_robot_pos,
-            self._init_robot_ori,
-        )
-
         # gets the occupancy of the environment and default robot init pose
         base_fixture_names = [
             fixture_name
